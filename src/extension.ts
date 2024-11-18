@@ -2,13 +2,8 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-/**
- * 根据不同的命名风格分割为全小写字符串数组
- *
- * @param identifier 待分割的字符串
- * @returns 分割后的字符串数组
- */
-function splitIdentifier(identifier: string): string[] {
+
+function splitIdentifierByRegex(identifier: string): string[] {
 	if (!identifier) {
 		return [""];
 	}
@@ -32,6 +27,135 @@ function splitIdentifier(identifier: string): string[] {
 	}
 }
 
+function splitIdentifierByState(identifier: string): string[] {
+    if (!identifier) {
+        return [""];
+    }
+    var result: string[] = [];
+    // 用于存放当前单词的字母数组
+    var temp: string[] = [];
+    enum State {
+        INIT,
+        LOWER,
+        UPPER,
+        INVALID
+    }
+
+    function pushWord(): void {
+        if (temp.length > 0) {
+            result.push(temp.join(""));
+        }
+        temp = [];
+    }
+
+    function FSM(state: State, char: string): State {
+        switch (state) {
+            case State.INIT: {
+                if (char.match(/[a-z]/)) {
+                    // 小写字母
+
+                    // 转移动作
+                    // 记录新单词
+                    temp.push(char);
+                    return State.LOWER;
+                }
+                else if (char.match(/[A-Z]/)) {
+                    // 大写字母
+
+                    // 转移动作
+                    // 记录新单词
+                    temp.push(char.toLowerCase());
+                    return State.UPPER;
+                }
+                else {
+                    return State.INVALID;
+                }
+            }
+            case State.LOWER: {
+                if (char.match(/[a-z\d]/)) {
+                    // 小写字母或数字
+
+                    // 转移动作
+                    temp.push(char);
+                    return State.LOWER;
+                }
+                else if (char.match(/[A-Z]/)) {
+                    // 大写字母
+
+                    // 转移动作
+                    // 前一个单词匹配完成
+                    pushWord();
+                    // 记录新单词
+                    temp.push(char.toLowerCase());
+                    return State.UPPER;
+                }
+                else if (char.match(/[_ ]/)) {
+                    // 空格或下划线
+
+                    // 转移动作
+                    // 前一个单词匹配完成
+                    pushWord();
+                    return State.INIT;
+                }
+                else {
+                    return State.INVALID;
+                }
+            }
+            case State.UPPER: {
+                if (char.match(/[a-z]/)) {
+                    // 小写字母
+
+                    // 转移动作
+                    temp.push(char.toLowerCase());
+                    return State.LOWER;
+                }
+                else if (char.match(/[A-Z\d]/)) {
+                    // 大写字母或数字
+
+                    // 转移动作
+                    temp.push(char.toLowerCase());
+                    return State.UPPER;
+                }
+                else if (char.match(/[_ ]/)) {
+                    // 空格或下划线
+
+                    // 转移动作
+                    // 前一个单词匹配完成
+                    pushWord();
+                    return State.INIT;
+                }
+                else {
+                    return State.INVALID;
+                }
+            }
+            default: {
+                return State.INVALID;
+            }
+        }
+    }
+
+    let currentState: State = State.INIT;
+    for (let i = 0; i < identifier.length; i++) {
+        currentState = FSM(currentState, identifier[i]);
+        if (currentState === State.INVALID) {
+            // 遇到非法字符，直接返回
+            return [identifier];
+        }
+    }
+    pushWord();
+
+    return result;
+}
+
+/**
+ * 根据不同的命名风格分割为全小写字符串数组
+ *
+ * @param identifier 待分割的字符串
+ * @returns 分割后的字符串数组
+ */
+function splitIdentifier(identifier: string): string[] {
+    return splitIdentifierByState(identifier);
+}
 
 function convertToBigHump(identifier: string): string {
 	const words = splitIdentifier(identifier);
