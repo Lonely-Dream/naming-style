@@ -1,4 +1,4 @@
-name: NodeJS with Grunt
+name: Build VSCode Extension
 
 on:
   push:
@@ -11,15 +11,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Use Node.js 20.x
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
+        cache: 'npm'  # 缓存 node_modules，提高构建速度
 
-    - name: Build
-      run: |
-        npm install
-        npm install @vscode/vsce
-        vsce package
+    - name: Install dependencies
+      run: npm ci  # 使用 ci 保持 package-lock.json 一致
+
+    - name: Package VSCode Extension
+      run: npx vsce package  # 使用 npx 直接运行 vsce，无需全局安装
+
+    - name: Upload VSIX artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vscode-extension
+        path: "*.vsix"  # 上传生成的 .vsix 文件
